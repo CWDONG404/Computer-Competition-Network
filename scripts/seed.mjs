@@ -1,4 +1,5 @@
 import postgres from "postgres";
+import { readFileSync } from "node:fs";
 import { catalog, evidenceLabels } from "../data/catalog-v2.mjs";
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -6,6 +7,9 @@ if (!databaseUrl) throw new Error("缺少 DATABASE_URL");
 
 const sql = postgres(databaseUrl, { max: 1 });
 const CATALOG_VERSION = 2;
+const legacyCatalog = JSON.parse(readFileSync(new URL("../data/seed-listings.json", import.meta.url), "utf8"));
+const currentCatalogSlugs = new Set(catalog.map((item) => item.slug));
+const retiredLegacySlugs = legacyCatalog.map((item) => item.slug).filter((slug) => !currentCatalogSlugs.has(slug));
 const manualHosts = new Set([
   "tianchi.aliyun.com",
   "e.huawei.com",
@@ -38,6 +42,12 @@ function monitorMode(url) {
 }
 
 try {
+  await sql`
+    UPDATE listings SET published=FALSE
+    WHERE catalog_managed=FALSE AND catalog_version=0
+      AND slug=ANY(${sql.array(retiredLegacySlugs)}::text[])
+  `;
+
   for (const item of catalog) {
     const rows = await sql`
       INSERT INTO listings (

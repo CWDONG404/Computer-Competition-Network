@@ -36,6 +36,15 @@ try {
     throw new Error(`存在缺少官网、证据或核验日期的公开条目：${invalid.map((row) => row.slug).join(", ")}`);
   }
 
+  const legacyPublished = await sql`
+    SELECT slug FROM listings
+    WHERE published=TRUE AND catalog_managed=FALSE AND catalog_version=0
+    ORDER BY slug
+  `;
+  if (legacyPublished.length > 0) {
+    throw new Error(`仍有旧版种子条目公开：${legacyPublished.map((row) => row.slug).join(", ")}`);
+  }
+
   const duplicates = await sql`
     SELECT slug, COUNT(*)::int AS count FROM listings GROUP BY slug HAVING COUNT(*) > 1
   `;
