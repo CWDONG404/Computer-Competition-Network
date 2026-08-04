@@ -9,3 +9,4 @@ out/
 coverage/
 *.tsbuildinfo
 NUL
+.codex-deploy/
