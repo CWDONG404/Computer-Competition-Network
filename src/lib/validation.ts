@@ -6,7 +6,7 @@ const emptyToNull = (value: unknown) => {
 };
 
 export const listingSchema = z.object({
-  kind: z.enum(["competition", "certification"]),
+  kind: z.enum(["competition", "certification", "platform"]),
   slug: z.string().trim().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug 只能包含小写字母、数字和连字符"),
   title: z.string().trim().min(2).max(160),
   short_title: z.preprocess(emptyToNull, z.string().trim().max(60).nullable()),
@@ -29,6 +29,11 @@ export const listingSchema = z.object({
   fee: z.preprocess(emptyToNull, z.string().trim().max(100).nullable()),
   team_size: z.preprocess(emptyToNull, z.string().trim().max(100).nullable()),
   status: z.enum(["open", "upcoming", "year_round", "awaiting", "closed"]),
+  cycle_type: z.enum(["fixed", "annual", "rolling", "on_demand"]),
+  eligibility: z.string().trim().min(2).max(500),
+  language: z.string().trim().min(1).max(100),
+  validity_period: z.preprocess(emptyToNull, z.string().trim().max(160).nullable()),
+  next_review_at: z.preprocess(emptyToNull, z.iso.date().nullable()),
   featured: z.boolean().default(false),
   published: z.boolean().default(false),
   verified_at: z.preprocess(emptyToNull, z.iso.date().nullable())

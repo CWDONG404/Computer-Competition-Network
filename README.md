@@ -1,13 +1,15 @@
-# Computer Competition Network
+# Computer Competition Network（CCN）
 
-面向中文用户的计算机比赛、黑客松与职业证书资料库。公开页面提供搜索、分类、适用人群和时间状态筛选；单管理员后台用于持续新增、核验、发布和归档条目。
+面向中文用户的计算机比赛、黑客松与职业证书技术情报台。主目录固定收录 70 场具体比赛与 50 项具体证书；Kaggle、天池、Devpost 等持续机会单列为平台，不占核心项目数量。
 
 ## 主要功能
 
-- 比赛与考证两个独立内容类型，共用统一目录和详情页。
-- 支持关键词、状态、适用人群和技能方向筛选。
-- 每条资料保留官方入口、信息来源、核验日期和编辑推荐理由。
-- 单管理员后台支持草稿、发布、精选、新增、编辑和删除。
+- 首页直接提供全站搜索、临近截止、大学生/在职入口与最近核验。
+- 目录支持关键词、类型、人群、方向、证据、状态和排序筛选，并兼容旧查询参数。
+- 日历按 7 天、30 天、季度和全年查看已确认时间节点。
+- 每条公开资料均绑定官方网站、事实证据标签、适用人群、时间状态和核验日期。
+- 单管理员后台支持手动新增、编辑、发布，以及页面变化待审箱；访客不能投稿。
+- 轻量监测器只创建待审任务，绝不自动修改公开资料；受验证码或脚本限制的来源转人工核验。
 - PostgreSQL 持久化，Docker Compose 一键启动。
 - 应用只绑定 `127.0.0.1:3003`，由 Caddy 通过 `ccn.cwdzone.top` 反向代理。
 - GitHub Actions 自动执行 Lint、类型检查和生产构建；配置部署 Secrets 后自动发布。
@@ -21,6 +23,7 @@ npm install
 cp .env.example .env.local
 npm run db:migrate
 npm run db:seed
+npm run db:validate
 npm run dev
 ```
 
@@ -41,7 +44,7 @@ cp .env.example .env.production
 docker compose --env-file .env.production up -d --build
 ```
 
-容器启动时会自动运行幂等迁移和种子数据检查。应用容器同时加入现有 `h2-growth-roadmap_default` 网络，供 Caddy 通过 `ccn-app:3000` 访问；PostgreSQL 只存在于项目内部网络，不映射宿主机端口。
+容器启动时会自动运行增量迁移和幂等种子导入。应用容器同时加入现有 `h2-growth-roadmap_default` 网络，供 Caddy 通过 `ccn-app:3000` 访问；PostgreSQL 只存在于项目内部网络，不映射宿主机端口。监测容器限制为约 128MB 内存和 0.25 CPU。
 
 生产域名的 Caddy 配置片段位于 `deploy/Caddyfile.ccn`。服务器现有 Caddy 仍负责证书与 HTTPS，不应再启动第二个占用 80/443 的代理。
 
@@ -62,3 +65,19 @@ docker compose --env-file .env.production up -d --build
 - 没有可靠公告时不推算报名和考试日期，统一标为“待官方公告”。
 - 推荐理由说明适合人群和能力方向，不提供就业、获奖或证书价值保证。
 - 报名资格、费用、考试版本与有效期始终以官网最新通知为准。
+
+## 发布前验收
+
+```bash
+npm run catalog:validate
+npm run lint
+npm run typecheck
+npm run build
+npm run db:migrate
+npm run db:seed
+npm run db:validate
+npm run monitor:test
+npm run test:e2e
+```
+
+端到端测试覆盖首页、目录、日历、详情、收录标准和后台待审登录页，并在 320、375、414、768、1280px 检查横向溢出、导航重复、44px 点击区域和可见键盘焦点。

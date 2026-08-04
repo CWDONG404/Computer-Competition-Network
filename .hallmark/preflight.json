@@ -1,8 +1,10 @@
 {
   "date": "2026-08-04",
-  "signals": "empty-project",
+  "signals": "redesign-existing-product",
   "framework": "Next.js 16 App Router",
-  "genre": "editorial",
+  "genre": "modern-minimal",
   "motion": "motion-cut",
-  "spacing": "4pt"
+  "spacing": "4pt",
+  "theme": "Cobalt",
+  "macrostructure": "Index-First / Catalogue / Split Studio"
 }

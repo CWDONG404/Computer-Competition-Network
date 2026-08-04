@@ -3,124 +3,87 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
-const groups = [
-  {
-    title: "按类型",
-    items: [
-      ["全部比赛", "/directory?kind=competition", "算法、黑客松、安全与工程"],
-      ["全部考证", "/directory?kind=certification", "职业资格与厂商认证"]
-    ]
-  },
-  {
-    title: "按人群",
-    items: [
-      ["大学生", "/directory?audience=大学生", "高校可参与项目"],
-      ["在职人群", "/directory?audience=在职", "职业发展与技术认证"]
-    ]
-  },
-  {
-    title: "按状态",
-    items: [
-      ["报名中", "/directory?status=open", "正在接受报名"],
-      ["全年可参与", "/directory?status=year_round", "滚动开放的平台与认证"]
-    ]
-  }
+const navigation = [
+  ["目录", "/directory"],
+  ["日历", "/calendar"],
+  ["机会平台", "/platforms"],
+  ["收录标准", "/about"]
 ] as const;
 
 export function SiteHeader() {
-  const [megaOpen, setMegaOpen] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const open = () => {
-    if (timer.current) clearTimeout(timer.current);
-    setMegaOpen(true);
-  };
-  const closeSoon = () => {
-    timer.current = setTimeout(() => setMegaOpen(false), 160);
+  const openSearch = () => {
+    dialogRef.current?.showModal();
+    window.setTimeout(() => inputRef.current?.focus(), 0);
   };
 
   useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setMegaOpen(false);
-        setMobileOpen(false);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        openSearch();
       }
+      if (event.key === "Escape") setMobileOpen(false);
     };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
 
   return (
-    <>
-      <header className="site-header">
-        <div className="shell header-row">
-          <Link className="brand" href="/" aria-label="竞赛与证书资料库首页">
-            <strong>竞赛与证书资料库</strong>
-            <span>CCN</span>
-          </Link>
-          <nav className="desktop-nav" aria-label="主导航">
-            <div onMouseEnter={open} onMouseLeave={closeSoon}>
-              <button
-                className={`nav-trigger ${megaOpen ? "is-open" : ""}`}
-                aria-expanded={megaOpen}
-                aria-controls="discovery-menu"
-                onClick={() => setMegaOpen((value) => !value)}
-              >
-                浏览资料 ↓
-              </button>
-            </div>
-            <Link className="nav-link" href="/directory?kind=competition">比赛</Link>
-            <Link className="nav-link" href="/directory?kind=certification">考证</Link>
-            <Link className="nav-link" href="/about">收录标准</Link>
-          </nav>
-          <div className="header-actions">
-            <Link className="nav-link" href="/admin">管理后台</Link>
-            <Link className="button button--accent" href="/directory">查看全部</Link>
-            <button
-              className="mobile-menu-button"
-              type="button"
-              aria-expanded={mobileOpen}
-              aria-controls="mobile-menu"
-              aria-label={mobileOpen ? "关闭菜单" : "打开菜单"}
-              onClick={() => setMobileOpen((value) => !value)}
-            >
-              {mobileOpen ? "×" : "≡"}
-            </button>
-          </div>
-        </div>
-        <div
-          id="discovery-menu"
-          className={`mega-panel ${megaOpen ? "is-open" : ""}`}
-          onMouseEnter={open}
-          onMouseLeave={closeSoon}
-        >
-          <div className="shell mega-inner">
-            {groups.map((group) => (
-              <section className="mega-group" key={group.title}>
-                <h2>{group.title}</h2>
-                {group.items.map(([label, href, description]) => (
-                  <Link className="mega-item" href={href} key={href} onClick={() => setMegaOpen(false)}>
-                    <b>{label}</b><span>{description}</span>
-                  </Link>
-                ))}
-              </section>
-            ))}
-            <Link className="mega-feature" href="/directory" onClick={() => setMegaOpen(false)}>
-              <span>完整目录 →</span>
-              <strong>先看时间，<br />再决定投入。</strong>
-            </Link>
-          </div>
-        </div>
-        <nav id="mobile-menu" className={`shell mobile-drawer ${mobileOpen ? "is-open" : ""}`} aria-label="移动端导航">
-          <Link href="/directory" onClick={() => setMobileOpen(false)}>全部资料</Link>
-          <Link href="/directory?kind=competition" onClick={() => setMobileOpen(false)}>比赛</Link>
-          <Link href="/directory?kind=certification" onClick={() => setMobileOpen(false)}>考证</Link>
-          <Link href="/about" onClick={() => setMobileOpen(false)}>收录标准</Link>
-          <Link href="/admin" onClick={() => setMobileOpen(false)}>管理后台</Link>
+    <header className="site-header">
+      <div className="shell header-row">
+        <Link className="brand" href="/" aria-label="CCN 技术赛事情报台首页">
+          <strong>CCN</strong><span>技术赛事情报台</span>
+        </Link>
+        <nav className="desktop-nav" aria-label="主导航">
+          {navigation.map(([label, href]) => <Link className="nav-link" href={href} key={href}>{label}</Link>)}
         </nav>
-      </header>
-      <button className={`nav-scrim ${megaOpen ? "is-active" : ""}`} aria-label="关闭菜单" tabIndex={megaOpen ? 0 : -1} onClick={() => setMegaOpen(false)} />
-    </>
+        <div className="header-actions">
+          <button className="search-trigger" type="button" onClick={openSearch} aria-label="打开全站搜索">
+            <span aria-hidden="true">⌕</span><span className="search-trigger__label">搜索</span><kbd>Ctrl K</kbd>
+          </button>
+          <Link className="admin-link" href="/admin">后台</Link>
+          <button
+            className="mobile-menu-button"
+            type="button"
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-menu"
+            aria-label={mobileOpen ? "关闭菜单" : "打开菜单"}
+            onClick={() => setMobileOpen((value) => !value)}
+          >
+            <span aria-hidden="true">{mobileOpen ? "×" : "≡"}</span>
+          </button>
+        </div>
+      </div>
+      <nav id="mobile-menu" className={`shell mobile-drawer ${mobileOpen ? "is-open" : ""}`} aria-label="移动端导航">
+        {navigation.map(([label, href]) => <Link href={href} key={href} onClick={() => setMobileOpen(false)}>{label}</Link>)}
+        <Link href="/admin" onClick={() => setMobileOpen(false)}>管理后台</Link>
+      </nav>
+
+      <dialog className="search-dialog" ref={dialogRef} onClick={(event) => {
+        if (event.target === dialogRef.current) dialogRef.current?.close();
+      }}>
+        <div className="search-dialog__panel">
+          <div className="search-dialog__head">
+            <div><span className="eyebrow">全站检索</span><strong>找比赛、证书或主办方</strong></div>
+            <button type="button" className="icon-button" onClick={() => dialogRef.current?.close()} aria-label="关闭搜索">×</button>
+          </div>
+          <form className="search-dialog__form" action="/directory" method="get">
+            <label className="sr-only" htmlFor="global-search">搜索关键词</label>
+            <input ref={inputRef} className="input" id="global-search" name="q" placeholder="例如：ICPC、Kubernetes、网络安全" autoComplete="off" />
+            <button className="button button--primary" type="submit">搜索目录</button>
+          </form>
+          <div className="quick-links" aria-label="快捷入口">
+            <Link href="/directory?audience=大学生">大学生项目</Link>
+            <Link href="/directory?audience=在职">在职认证</Link>
+            <Link href="/directory?status=open&sort=deadline">临近截止</Link>
+            <Link href="/platforms">持续机会平台</Link>
+          </div>
+        </div>
+      </dialog>
+    </header>
   );
 }

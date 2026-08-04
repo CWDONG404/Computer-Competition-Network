@@ -1,5 +1,13 @@
 import postgres, { type Sql } from "postgres";
-import type { Listing, ListingKind, ListingStatus } from "@/types/listing";
+import type {
+  ListingDetails,
+  ListingEvent,
+  ListingKind,
+  ListingSource,
+  ListingStatus,
+  ListingWithEvidence,
+  ReviewItem
+} from "@/types/listing";
 
 let client: Sql | undefined;
 
@@ -19,28 +27,81 @@ export function db() {
 
 export async function getHomeData() {
   const sql = db();
-  const [featured, latest, counts, categories] = await Promise.all([
-    sql<Listing[]>`SELECT * FROM listings WHERE published = TRUE AND featured = TRUE ORDER BY updated_at DESC LIMIT 6`,
-    sql<Listing[]>`SELECT * FROM listings WHERE published = TRUE ORDER BY updated_at DESC LIMIT 8`,
-    sql<{ kind: ListingKind; count: number }[]>`
-      SELECT kind, COUNT(*)::int AS count FROM listings WHERE published = TRUE GROUP BY kind
+  const [deadlines, rolling, latest, counts, tracks, pending] = await Promise.all([
+    sql<ListingWithEvidence[]>`
+      SELECT l.*,
+        COALESCE((
+          SELECT jsonb_agg(jsonb_build_object(
+            'id', e.id, 'listing_id', e.listing_id, 'source_id', e.source_id,
+            'code', e.code, 'label', e.label, 'note', e.note, 'source_url', s.url
+          ) ORDER BY e.id)
+          FROM listing_evidence e LEFT JOIN listing_sources s ON s.id = e.source_id
+          WHERE e.listing_id = l.id
+        ), '[]'::jsonb) AS evidence
+      FROM listings l
+      WHERE l.published = TRUE AND l.kind = 'competition'
+        AND l.status IN ('open', 'upcoming')
+      ORDER BY l.registration_end ASC NULLS LAST, l.event_start ASC NULLS LAST, l.featured DESC
+      LIMIT 8
     `,
-    sql<{ category: string; count: number }[]>`
-      SELECT category, COUNT(*)::int AS count
-      FROM listings, UNNEST(categories) AS category
-      WHERE published = TRUE
-      GROUP BY category ORDER BY count DESC, category ASC LIMIT 10
-    `
+    sql<ListingWithEvidence[]>`
+      SELECT l.*,
+        COALESCE((
+          SELECT jsonb_agg(jsonb_build_object(
+            'id', e.id, 'listing_id', e.listing_id, 'source_id', e.source_id,
+            'code', e.code, 'label', e.label, 'note', e.note, 'source_url', s.url
+          ) ORDER BY e.id)
+          FROM listing_evidence e LEFT JOIN listing_sources s ON s.id = e.source_id
+          WHERE e.listing_id = l.id
+        ), '[]'::jsonb) AS evidence
+      FROM listings l
+      WHERE l.published = TRUE AND l.kind IN ('competition', 'certification')
+        AND (l.status = 'year_round' OR l.cycle_type IN ('rolling', 'on_demand'))
+      ORDER BY l.featured DESC, l.verified_at DESC NULLS LAST, l.title ASC
+      LIMIT 6
+    `,
+    sql<ListingWithEvidence[]>`
+      SELECT l.*,
+        COALESCE((
+          SELECT jsonb_agg(jsonb_build_object(
+            'id', e.id, 'listing_id', e.listing_id, 'source_id', e.source_id,
+            'code', e.code, 'label', e.label, 'note', e.note, 'source_url', s.url
+          ) ORDER BY e.id)
+          FROM listing_evidence e LEFT JOIN listing_sources s ON s.id = e.source_id
+          WHERE e.listing_id = l.id
+        ), '[]'::jsonb) AS evidence
+      FROM listings l
+      WHERE l.published = TRUE AND l.kind IN ('competition', 'certification')
+      ORDER BY l.verified_at DESC NULLS LAST, l.updated_at DESC
+      LIMIT 8
+    `,
+    sql<{ kind: ListingKind; count: number }[]>`
+      SELECT kind, COUNT(*)::int AS count
+      FROM listings WHERE published = TRUE AND kind IN ('competition', 'certification')
+      GROUP BY kind
+    `,
+    sql<{ track: string; count: number }[]>`
+      SELECT track, COUNT(*)::int AS count
+      FROM listings, UNNEST(categories) AS track
+      WHERE published = TRUE AND kind IN ('competition', 'certification')
+      GROUP BY track ORDER BY count DESC, track ASC
+    `,
+    sql<{ count: number }[]>`SELECT COUNT(*)::int AS count FROM review_items WHERE status = 'pending'`
   ]);
-  return { featured, latest, counts, categories };
+
+  return { deadlines, rolling, latest, counts, tracks, pendingReviews: pending[0]?.count ?? 0 };
 }
+
+export type ListingSort = "deadline" | "recently_verified" | "recognition";
 
 export interface ListingFilters {
   q?: string;
   kind?: ListingKind;
   status?: ListingStatus;
   audience?: string;
-  category?: string;
+  track?: string;
+  recognition?: string;
+  sort?: ListingSort;
   page?: number;
   pageSize?: number;
 }
@@ -51,45 +112,63 @@ export async function findListings(filters: ListingFilters = {}, includeDrafts =
   const kind = filters.kind || null;
   const status = filters.status || null;
   const audience = filters.audience?.trim() || null;
-  const category = filters.category?.trim() || null;
+  const track = filters.track?.trim() || null;
+  const recognition = filters.recognition?.trim() || null;
+  const sort: ListingSort = filters.sort || "deadline";
   const page = Math.max(1, filters.page || 1);
-  const pageSize = Math.min(100, Math.max(1, filters.pageSize || 18));
+  const pageSize = Math.min(100, Math.max(1, filters.pageSize || 20));
   const offset = (page - 1) * pageSize;
   const publishedOnly = !includeDrafts;
+  const allKinds = includeDrafts && kind === null;
+  const coreOnly = !includeDrafts && kind === null;
+  const like = q ? `%${q}%` : null;
 
   const [items, total] = await Promise.all([
-    sql<Listing[]>`
-      SELECT * FROM listings
-      WHERE (${publishedOnly} = FALSE OR published = TRUE)
-        AND (${kind}::text IS NULL OR kind = ${kind})
-        AND (${status}::text IS NULL OR status = ${status})
-        AND (${audience}::text IS NULL OR ${audience} = ANY(audience))
-        AND (${category}::text IS NULL OR ${category} = ANY(categories))
+    sql<ListingWithEvidence[]>`
+      SELECT l.*,
+        COALESCE((
+          SELECT jsonb_agg(jsonb_build_object(
+            'id', e.id, 'listing_id', e.listing_id, 'source_id', e.source_id,
+            'code', e.code, 'label', e.label, 'note', e.note, 'source_url', s.url
+          ) ORDER BY e.id)
+          FROM listing_evidence e LEFT JOIN listing_sources s ON s.id = e.source_id
+          WHERE e.listing_id = l.id
+        ), '[]'::jsonb) AS evidence,
+        (SELECT COUNT(*)::int FROM listing_evidence e WHERE e.listing_id = l.id) AS evidence_count
+      FROM listings l
+      WHERE (${publishedOnly} = FALSE OR l.published = TRUE)
+        AND (${allKinds} = TRUE OR (${coreOnly} = TRUE AND l.kind IN ('competition', 'certification')) OR l.kind = ${kind})
+        AND (${status}::text IS NULL OR l.status = ${status})
+        AND (${audience}::text IS NULL OR ${audience} = ANY(l.audience))
+        AND (${track}::text IS NULL OR ${track} = ANY(l.categories))
+        AND (${recognition}::text IS NULL OR EXISTS (
+          SELECT 1 FROM listing_evidence re WHERE re.listing_id = l.id AND re.code = ${recognition}
+        ))
         AND (
-          ${q}::text IS NULL
-          OR title ILIKE ${q ? `%${q}%` : null}
-          OR COALESCE(short_title, '') ILIKE ${q ? `%${q}%` : null}
-          OR organizer ILIKE ${q ? `%${q}%` : null}
-          OR summary ILIKE ${q ? `%${q}%` : null}
+          ${q}::text IS NULL OR l.title ILIKE ${like} OR COALESCE(l.short_title, '') ILIKE ${like}
+          OR l.organizer ILIKE ${like} OR l.summary ILIKE ${like} OR l.recognition ILIKE ${like}
         )
-      ORDER BY featured DESC,
-        CASE status WHEN 'open' THEN 1 WHEN 'upcoming' THEN 2 WHEN 'year_round' THEN 3 WHEN 'awaiting' THEN 4 ELSE 5 END,
-        registration_end ASC NULLS LAST, updated_at DESC
+      ORDER BY l.featured DESC,
+        CASE WHEN ${sort} = 'deadline' THEN l.registration_end END ASC NULLS LAST,
+        CASE WHEN ${sort} = 'recently_verified' THEN l.verified_at END DESC NULLS LAST,
+        CASE WHEN ${sort} = 'recognition' THEN (SELECT COUNT(*) FROM listing_evidence se WHERE se.listing_id = l.id) END DESC NULLS LAST,
+        CASE l.status WHEN 'open' THEN 1 WHEN 'upcoming' THEN 2 WHEN 'year_round' THEN 3 WHEN 'awaiting' THEN 4 ELSE 5 END,
+        l.verified_at DESC NULLS LAST, l.title ASC
       LIMIT ${pageSize} OFFSET ${offset}
     `,
     sql<{ count: number }[]>`
-      SELECT COUNT(*)::int AS count FROM listings
-      WHERE (${publishedOnly} = FALSE OR published = TRUE)
-        AND (${kind}::text IS NULL OR kind = ${kind})
-        AND (${status}::text IS NULL OR status = ${status})
-        AND (${audience}::text IS NULL OR ${audience} = ANY(audience))
-        AND (${category}::text IS NULL OR ${category} = ANY(categories))
+      SELECT COUNT(*)::int AS count FROM listings l
+      WHERE (${publishedOnly} = FALSE OR l.published = TRUE)
+        AND (${allKinds} = TRUE OR (${coreOnly} = TRUE AND l.kind IN ('competition', 'certification')) OR l.kind = ${kind})
+        AND (${status}::text IS NULL OR l.status = ${status})
+        AND (${audience}::text IS NULL OR ${audience} = ANY(l.audience))
+        AND (${track}::text IS NULL OR ${track} = ANY(l.categories))
+        AND (${recognition}::text IS NULL OR EXISTS (
+          SELECT 1 FROM listing_evidence re WHERE re.listing_id = l.id AND re.code = ${recognition}
+        ))
         AND (
-          ${q}::text IS NULL
-          OR title ILIKE ${q ? `%${q}%` : null}
-          OR COALESCE(short_title, '') ILIKE ${q ? `%${q}%` : null}
-          OR organizer ILIKE ${q ? `%${q}%` : null}
-          OR summary ILIKE ${q ? `%${q}%` : null}
+          ${q}::text IS NULL OR l.title ILIKE ${like} OR COALESCE(l.short_title, '') ILIKE ${like}
+          OR l.organizer ILIKE ${like} OR l.summary ILIKE ${like} OR l.recognition ILIKE ${like}
         )
     `
   ]);
@@ -97,27 +176,109 @@ export async function findListings(filters: ListingFilters = {}, includeDrafts =
   return { items, total: total[0]?.count ?? 0, page, pageSize };
 }
 
-export async function getListingBySlug(slug: string, includeDrafts = false) {
+export async function getListingBySlug(slug: string, includeDrafts = false): Promise<ListingDetails | null> {
   const sql = db();
-  const rows = await sql<Listing[]>`
-    SELECT * FROM listings WHERE slug = ${slug} AND (${includeDrafts} = TRUE OR published = TRUE) LIMIT 1
+  const rows = await sql<ListingWithEvidence[]>`
+    SELECT l.*,
+      COALESCE((
+        SELECT jsonb_agg(jsonb_build_object(
+          'id', e.id, 'listing_id', e.listing_id, 'source_id', e.source_id,
+          'code', e.code, 'label', e.label, 'note', e.note, 'source_url', s.url
+        ) ORDER BY e.id)
+        FROM listing_evidence e LEFT JOIN listing_sources s ON s.id = e.source_id
+        WHERE e.listing_id = l.id
+      ), '[]'::jsonb) AS evidence
+    FROM listings l
+    WHERE l.slug = ${slug} AND (${includeDrafts} = TRUE OR l.published = TRUE) LIMIT 1
   `;
-  return rows[0] ?? null;
+  const item = rows[0];
+  if (!item) return null;
+
+  const [sources, events, related] = await Promise.all([
+    sql<ListingSource[]>`SELECT id, listing_id, role, title, url, monitor_mode, active, last_checked_at, last_success_at, next_check_at, last_error
+        FROM listing_sources WHERE listing_id = ${item.id} AND active = TRUE ORDER BY role, id`,
+    sql<ListingEvent[]>`SELECT id, listing_id, source_id, cycle_label, event_type, starts_at, ends_at, timezone, confirmed
+        FROM listing_events WHERE listing_id = ${item.id} ORDER BY starts_at ASC NULLS LAST, id`,
+    sql<ListingWithEvidence[]>`
+      SELECT l.*,
+        COALESCE((SELECT jsonb_agg(jsonb_build_object(
+          'id', e.id, 'listing_id', e.listing_id, 'source_id', e.source_id,
+          'code', e.code, 'label', e.label, 'note', e.note, 'source_url', s.url
+        ) ORDER BY e.id) FROM listing_evidence e LEFT JOIN listing_sources s ON s.id = e.source_id
+        WHERE e.listing_id = l.id), '[]'::jsonb) AS evidence
+      FROM listings l
+      WHERE l.published = TRUE AND l.id <> ${item.id} AND l.kind = ${item.kind}
+        AND l.categories && ${sql.array(item.categories)}::text[]
+      ORDER BY l.featured DESC, l.verified_at DESC NULLS LAST LIMIT 4
+    `
+  ]);
+
+  return { ...item, sources, events, related };
 }
 
 export async function getListingById(id: number) {
   const sql = db();
-  const rows = await sql<Listing[]>`SELECT * FROM listings WHERE id = ${id} LIMIT 1`;
+  const rows = await sql<ListingWithEvidence[]>`
+    SELECT l.*,
+      COALESCE((SELECT jsonb_agg(jsonb_build_object(
+        'id', e.id, 'listing_id', e.listing_id, 'source_id', e.source_id,
+        'code', e.code, 'label', e.label, 'note', e.note, 'source_url', s.url
+      ) ORDER BY e.id) FROM listing_evidence e LEFT JOIN listing_sources s ON s.id = e.source_id
+      WHERE e.listing_id = l.id), '[]'::jsonb) AS evidence
+    FROM listings l WHERE l.id = ${id} LIMIT 1
+  `;
   return rows[0] ?? null;
 }
 
 export async function getTaxonomy() {
   const sql = db();
-  const [audiences, categories] = await Promise.all([
-    sql<{ value: string }[]>`SELECT DISTINCT UNNEST(audience) AS value FROM listings WHERE published = TRUE ORDER BY value`,
-    sql<{ value: string }[]>`SELECT DISTINCT UNNEST(categories) AS value FROM listings WHERE published = TRUE ORDER BY value`
+  const [audiences, tracks] = await Promise.all([
+    sql<{ value: string }[]>`SELECT DISTINCT UNNEST(audience) AS value FROM listings WHERE published = TRUE AND kind <> 'platform' ORDER BY value`,
+    sql<{ value: string }[]>`SELECT DISTINCT UNNEST(categories) AS value FROM listings WHERE published = TRUE AND kind <> 'platform' ORDER BY value`
   ]);
-  return { audiences: audiences.map((x) => x.value), categories: categories.map((x) => x.value) };
+  return { audiences: audiences.map((x) => x.value), tracks: tracks.map((x) => x.value) };
+}
+
+export async function getCalendarData() {
+  const sql = db();
+  return sql<ListingWithEvidence[]>`
+    SELECT l.*,
+      COALESCE((SELECT jsonb_agg(jsonb_build_object(
+        'id', e.id, 'listing_id', e.listing_id, 'source_id', e.source_id,
+        'code', e.code, 'label', e.label, 'note', e.note, 'source_url', s.url
+      ) ORDER BY e.id) FROM listing_evidence e LEFT JOIN listing_sources s ON s.id = e.source_id
+      WHERE e.listing_id = l.id), '[]'::jsonb) AS evidence
+    FROM listings l
+    WHERE l.published = TRUE AND l.kind = 'competition'
+      AND (l.registration_end IS NOT NULL OR l.event_start IS NOT NULL OR l.status = 'year_round')
+    ORDER BY COALESCE(l.registration_end, l.event_start) ASC NULLS LAST, l.title ASC
+  `;
+}
+
+export async function getPlatforms() {
+  const sql = db();
+  return sql<ListingWithEvidence[]>`
+    SELECT l.*,
+      COALESCE((SELECT jsonb_agg(jsonb_build_object(
+        'id', e.id, 'listing_id', e.listing_id, 'source_id', e.source_id,
+        'code', e.code, 'label', e.label, 'note', e.note, 'source_url', s.url
+      ) ORDER BY e.id) FROM listing_evidence e LEFT JOIN listing_sources s ON s.id = e.source_id
+      WHERE e.listing_id = l.id), '[]'::jsonb) AS evidence
+    FROM listings l WHERE l.published = TRUE AND l.kind = 'platform'
+    ORDER BY l.title ASC
+  `;
+}
+
+export async function getReviewItems(status: "pending" | "accepted" | "dismissed" = "pending") {
+  const sql = db();
+  return sql<ReviewItem[]>`
+    SELECT r.*, l.title AS listing_title, s.title AS source_title, s.url AS source_url
+    FROM review_items r
+    LEFT JOIN listings l ON l.id = r.listing_id
+    LEFT JOIN listing_sources s ON s.id = r.source_id
+    WHERE r.status = ${status}
+    ORDER BY r.detected_at DESC
+  `;
 }
 
 export async function healthcheck() {

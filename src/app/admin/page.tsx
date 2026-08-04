@@ -16,12 +16,14 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       <header className="page-head">
         <div><p className="eyebrow">Editorial desk</p><h1>资料管理</h1></div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-sm)", justifyContent: "flex-end" }}>
+          <Link className="button" href="/admin/review">待审箱</Link>
           <Link className="button button--accent" href="/admin/new">新增条目</Link>
           <form action={logoutAction}><button className="button" type="submit">退出登录</button></form>
         </div>
       </header>
       {params.saved && <div className="notice" style={{ marginBottom: "var(--space-lg)" }}>条目已保存。</div>}
       {params.deleted && <div className="notice" style={{ marginBottom: "var(--space-lg)" }}>条目已删除。</div>}
+      {params.publish_error && <div className="error-message" role="alert" style={{ marginBottom: "var(--space-lg)" }}>发布失败：请先在编辑页填写核验日期、官方网站，并选择至少一项认可证据。</div>}
       <p className="mono muted">共 {total} 条，含草稿。</p>
       <div style={{ borderTop: "2px solid var(--color-ink)" }}>
         {items.map((item) => (

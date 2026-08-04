@@ -10,11 +10,23 @@
     "typecheck": "tsc --noEmit",
     "db:migrate": "node scripts/migrate.mjs",
     "db:seed": "node scripts/seed.mjs",
+    "db:validate": "node scripts/validate-database.mjs",
+    "db:test-seed-ownership": "node scripts/test-seed-ownership.mjs",
+    "catalog:validate": "node scripts/validate-catalog.mjs",
+    "catalog:check-urls": "node scripts/check-catalog-urls.mjs",
+    "monitor": "node scripts/monitor-sources.mjs",
+    "monitor:test": "node scripts/test-monitor.mjs",
+    "test:e2e": "playwright test",
+    "start:e2e": "node scripts/start-e2e.mjs",
     "auth:hash": "node scripts/hash-password.mjs"
   },
   "dependencies": {
     "@fontsource-variable/ibm-plex-sans": "5.3.0",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
     "@fontsource-variable/newsreader": "5.3.0",
+    "@fontsource-variable/noto-sans-sc": "^5.3.0",
+    "@fontsource-variable/space-grotesk": "^5.3.0",
     "jose": "6.2.8",
     "next": "16.3.0",
     "postgres": "3.4.9",
@@ -23,6 +35,7 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
     "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { saveListingAction, type FormState } from "@/app/admin/actions";
-import type { Listing } from "@/types/listing";
+import { evidenceLabels, type EvidenceCode, type ListingWithEvidence } from "@/types/listing";
 
 const initialState: FormState = {};
 const dateValue = (value: string | null | undefined) => value ? String(value).slice(0, 10) : "";
@@ -11,14 +11,26 @@ function ErrorText({ errors }: { errors?: string[] }) {
   return <small aria-live="polite" style={{ color: "var(--color-error)" }}>{errors?.[0] || ""}</small>;
 }
 
-export function ListingForm({ item }: { item?: Listing | null }) {
+export function ListingForm({ item }: { item?: ListingWithEvidence | null }) {
   const [state, action, pending] = useActionState(saveListingAction, initialState);
+  const [clientError, setClientError] = useState<string | null>(null);
   return (
-    <form action={action} style={{ display: "grid", gap: "var(--space-xl)", paddingBottom: "var(--space-3xl)" }}>
+    <form action={action} onSubmit={(event) => {
+      const values = new FormData(event.currentTarget);
+      const wantsPublish = values.get("published") === "on";
+      const hasVerifiedDate = Boolean(values.get("verified_at"));
+      const hasEvidence = values.getAll("evidence_codes").length > 0;
+      if (wantsPublish && (!hasVerifiedDate || !hasEvidence)) {
+        event.preventDefault();
+        setClientError("发布前必须填写核验日期，并至少选择一项可追溯的认可证据。");
+        return;
+      }
+      setClientError(null);
+    }} style={{ display: "grid", gap: "var(--space-xl)", paddingBottom: "var(--space-3xl)" }}>
       {item && <input type="hidden" name="id" value={item.id} />}
-      {state.error && <div className="error-message" role="alert">{state.error}</div>}
+      {(clientError || state.error) && <div className="error-message" role="alert">{clientError || state.error}</div>}
       <div className="filter-form" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
-        <div className="field"><label htmlFor="kind">类型</label><select className="select" id="kind" name="kind" defaultValue={item?.kind || "competition"}><option value="competition">比赛</option><option value="certification">考证</option></select></div>
+        <div className="field"><label htmlFor="kind">类型</label><select className="select" id="kind" name="kind" defaultValue={item?.kind || "competition"}><option value="competition">比赛</option><option value="certification">考证</option><option value="platform">机会平台</option></select></div>
         <div className="field"><label htmlFor="status">状态</label><select className="select" id="status" name="status" defaultValue={item?.status || "awaiting"}><option value="open">报名中</option><option value="upcoming">即将开始</option><option value="year_round">全年可参与</option><option value="awaiting">待官方公告</option><option value="closed">本期已结束</option></select></div>
         <div className="field"><label htmlFor="slug">Slug</label><input className="input" id="slug" name="slug" defaultValue={item?.slug || ""} placeholder="icpc-2026" required /><ErrorText errors={state.fieldErrors?.slug} /></div>
       </div>
@@ -27,6 +39,23 @@ export function ListingForm({ item }: { item?: Listing | null }) {
         <div className="field"><label htmlFor="title">完整名称</label><input className="input" id="title" name="title" defaultValue={item?.title || ""} required /><ErrorText errors={state.fieldErrors?.title} /></div>
         <div className="field"><label htmlFor="short_title">简称</label><input className="input" id="short_title" name="short_title" defaultValue={item?.short_title || ""} /></div>
         <div className="field"><label htmlFor="summary">一句话简介</label><textarea className="textarea" id="summary" name="summary" defaultValue={item?.summary || ""} required /><ErrorText errors={state.fieldErrors?.summary} /></div>
+      </section>
+
+      <section style={{ display: "grid", gap: "var(--space-md)" }}>
+        <div><p className="eyebrow">认可证据</p><p className="muted">发布条目至少选择一项；保存后会关联到官方网站来源。</p></div>
+        <div className="evidence-picker">
+          {(Object.entries(evidenceLabels) as [EvidenceCode, string][]).map(([code, label]) => (
+            <label key={code}><input name="evidence_codes" type="checkbox" value={code} defaultChecked={item?.evidence.some((evidence) => evidence.code === code)} /><span>{label}</span></label>
+          ))}
+        </div>
+      </section>
+
+      <section className="filter-form" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+        <div className="field"><label htmlFor="cycle_type">周期类型</label><select className="select" id="cycle_type" name="cycle_type" defaultValue={item?.cycle_type || "annual"}><option value="fixed">固定窗口</option><option value="annual">年度举办</option><option value="rolling">滚动开放</option><option value="on_demand">按需预约</option></select></div>
+        <div className="field"><label htmlFor="language">语言</label><input className="input" id="language" name="language" defaultValue={item?.language || "中文或英文"} required /></div>
+        <div className="field"><label htmlFor="validity_period">证书有效期</label><input className="input" id="validity_period" name="validity_period" defaultValue={item?.validity_period || ""} placeholder="不适用可留空" /></div>
+        <div className="field" style={{ gridColumn: "span 2" }}><label htmlFor="eligibility">资格条件</label><textarea className="textarea" id="eligibility" name="eligibility" defaultValue={item?.eligibility || "以官方规则为准"} required /></div>
+        <div className="field"><label htmlFor="next_review_at">下次复核</label><input className="input" id="next_review_at" name="next_review_at" type="date" defaultValue={dateValue(item?.next_review_at)} /></div>
       </section>
 
       <section className="detail-body" style={{ paddingBlock: "var(--space-xl)" }}>

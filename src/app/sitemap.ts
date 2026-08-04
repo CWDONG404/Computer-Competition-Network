@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://ccn.cwdzone.top";
-  const staticPages: MetadataRoute.Sitemap = ["", "/directory", "/about"].map((path) => ({
+  const staticPages: MetadataRoute.Sitemap = ["", "/directory", "/calendar", "/platforms", "/about"].map((path) => ({
     url: `${siteUrl}${path}`,
     lastModified: new Date(),
     changeFrequency: path ? "weekly" : "daily",

@@ -1,29 +1,32 @@
-/* Hallmark · genre: editorial · macrostructure: Ecosystem Index · theme: Almanac · enrichment: none · nav: N11 · footer: Ft4 · contrast: pass (40–41) · slop: pass (42–49) · mobile: pass (34, 49–57) */
-/* Hallmark · pre-emit critique: P5 H4 E5 S5 R5 V5 */
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
+/* Hallmark · genre: modern-minimal · macrostructure: Index-First / Catalogue / Split Studio · theme: Cobalt · enrichment: none · nav: N13 · footer: Ft2 · contrast: pass (40–41) · slop: pass (42–49) · mobile: pass (34, 49, 50–57) · knobs: search-first, dense-rows, evidence-led */
 :root {
-  --color-paper: oklch(97.2% 0.012 82);
-  --color-paper-2: oklch(94.8% 0.018 82);
-  --color-paper-3: oklch(91.8% 0.022 78);
-  --color-ink: oklch(22% 0.025 63);
-  --color-ink-2: oklch(35% 0.025 63);
-  --color-muted: oklch(44% 0.025 68);
-  --color-rule: oklch(78% 0.028 76);
-  --color-rule-strong: oklch(61% 0.038 68);
-  --color-accent: oklch(42% 0.16 34);
-  --color-accent-hover: oklch(36% 0.16 34);
-  --color-accent-soft: oklch(91% 0.055 42);
-  --color-accent-ink: oklch(98% 0.008 75);
-  --color-positive: oklch(45% 0.105 145);
-  --color-positive-soft: oklch(91% 0.045 145);
-  --color-error: oklch(40% 0.17 25);
-  --color-error-soft: oklch(92% 0.05 25);
-  --color-focus: oklch(48% 0.17 250);
-  --color-scrim: oklch(18% 0.015 60 / 0.3);
-  --color-shadow: oklch(20% 0.02 60 / 0.07);
+  --color-paper: #f7f9fc;
+  --color-paper-2: #eef2f8;
+  --color-paper-3: #e5ebf4;
+  --color-surface: #fbfcfe;
+  --color-ink: #101828;
+  --color-ink-2: #344054;
+  --color-muted: #5f6b7c;
+  --color-rule: #d8e0ec;
+  --color-rule-strong: #b8c4d4;
+  --color-accent: #145bff;
+  --color-accent-hover: #0b47d1;
+  --color-accent-soft: #e8efff;
+  --color-accent-ink: #f8fbff;
+  --color-positive: #137a50;
+  --color-positive-soft: #e8f6ef;
+  --color-warning: #9a5b00;
+  --color-warning-soft: #fff3db;
+  --color-error: #b42318;
+  --color-error-soft: #feeceb;
+  --color-focus: #145bff;
+  --color-scrim: rgb(16 24 40 / 42%);
+  --color-shadow: rgb(16 24 40 / 8%);
 
-  --font-display: "Newsreader Variable", "Songti SC", serif;
-  --font-body: "IBM Plex Sans Variable", "Microsoft YaHei", sans-serif;
-  --font-mono: "IBM Plex Sans Variable", "Microsoft YaHei", sans-serif;
+  --font-display: "Space Grotesk Variable", "Noto Sans SC Variable", sans-serif;
+  --font-body: "Inter Variable", "Noto Sans SC Variable", sans-serif;
+  --font-mono: "JetBrains Mono Variable", "Noto Sans SC Variable", monospace;
 
   --space-3xs: 0.125rem;
   --space-2xs: 0.25rem;
@@ -31,40 +34,39 @@
   --space-sm: 0.75rem;
   --space-md: 1rem;
   --space-lg: 1.5rem;
-  --space-xl: 2.5rem;
-  --space-2xl: 4rem;
-  --space-3xl: 6rem;
-  --space-4xl: 9rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4.5rem;
+  --space-4xl: 7rem;
 
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;
-  --text-md: 1.25rem;
-  --text-lg: 1.5625rem;
-  --text-xl: 1.953rem;
-  --text-2xl: 2.441rem;
-  --text-3xl: 3.052rem;
-  --text-display: clamp(2.75rem, 5vw + 1rem, 5.25rem);
-  --text-display-s: clamp(2.25rem, 3.5vw + 1rem, 4rem);
+  --text-md: 1.125rem;
+  --text-lg: 1.375rem;
+  --text-xl: 1.75rem;
+  --text-2xl: 2.25rem;
+  --text-3xl: 3rem;
+  --text-display-s: clamp(2rem, 3vw, 3rem);
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  --dur-fast: 120ms;
-  --dur-base: 220ms;
-  --dur-slow: 420ms;
+  --dur-fast: 110ms;
+  --dur-base: 180ms;
+  --dur-slow: 320ms;
   --rule-hairline: 1px;
-  --radius-sm: 0.25rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --shadow-whisper: 0 1px 2px var(--color-shadow);
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
+  --shadow-whisper: 0 1px 2px var(--color-shadow), 0 6px 18px var(--color-shadow);
 
-  --page-max: 90rem;
-  --page-gutter: clamp(1rem, 3.5vw, 3.5rem);
+  --page-max: 88rem;
+  --page-gutter: clamp(1rem, 3vw, 2.5rem);
   --z-base: 1;
   --z-raised: 10;
   --z-dropdown: 100;
   --z-sticky: 200;
+  --z-sticky-nav: 300;
   --z-modal: 400;
   --z-toast: 500;
   --z-tooltip: 600;

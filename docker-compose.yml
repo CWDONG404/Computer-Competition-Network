@@ -47,6 +47,21 @@ services:
         aliases:
           - ccn-app
 
+  monitor:
+    build: .
+    container_name: ccn-monitor
+    restart: unless-stopped
+    command: ["node", "scripts/monitor-loop.mjs"]
+    mem_limit: 128m
+    cpus: 0.25
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?请配置 DATABASE_URL}
+    networks:
+      - ccn-internal
+
 networks:
   ccn-internal:
   caddy-shared:

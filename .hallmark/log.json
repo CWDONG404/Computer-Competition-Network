@@ -7,5 +7,15 @@
     "nav": "N11 Mega-menu",
     "footer": "Ft4 Dense typographic",
     "brief": "中文社区比赛与职业证书资料库"
+  },
+  {
+    "date": "2026-08-04",
+    "macrostructure": "Index-First / Catalogue / Split Studio",
+    "theme": "Cobalt",
+    "enrichment": "none",
+    "nav": "N13 Search-led",
+    "footer": "Ft2 Single-line utility",
+    "brief": "CCN v2 技术赛事情报台与 120 条严选目录",
+    "variation_knobs": "search-first, dense-rows, evidence-led"
   }
 ]
