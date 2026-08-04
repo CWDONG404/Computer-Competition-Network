@@ -45,7 +45,7 @@ try {
   await sql`
     UPDATE listings SET published=FALSE
     WHERE catalog_managed=FALSE AND catalog_version=0
-      AND slug=ANY(${sql.array(retiredLegacySlugs)}::text[])
+      AND slug IN (SELECT jsonb_array_elements_text(${sql.json(retiredLegacySlugs)}))
   `;
 
   for (const item of catalog) {
