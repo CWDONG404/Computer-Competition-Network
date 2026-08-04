@@ -19,6 +19,7 @@ services:
 
   app:
     build: .
+    image: cwdzone-ccn-runtime:latest
     container_name: ccn-app
     restart: unless-stopped
     mem_limit: 512m
@@ -48,7 +49,7 @@ services:
           - ccn-app
 
   monitor:
-    build: .
+    image: cwdzone-ccn-runtime:latest
     container_name: ccn-monitor
     restart: unless-stopped
     command: ["node", "scripts/monitor-loop.mjs"]
