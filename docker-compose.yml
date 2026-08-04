@@ -21,6 +21,8 @@ services:
     build: .
     container_name: ccn-app
     restart: unless-stopped
+    mem_limit: 512m
+    cpus: 1.0
     depends_on:
       database:
         condition: service_healthy
@@ -30,6 +32,7 @@ services:
       ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:?请配置 ADMIN_PASSWORD_HASH}
       SESSION_SECRET: ${SESSION_SECRET:?请配置 SESSION_SECRET}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?请配置 NEXT_PUBLIC_SITE_URL}
+      HOSTNAME: 0.0.0.0
     ports:
       - "127.0.0.1:3003:3000"
     healthcheck:

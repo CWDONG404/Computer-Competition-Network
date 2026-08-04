@@ -21,7 +21,9 @@ try {
       ) VALUES (
         ${item.kind}, ${item.slug}, ${item.title}, ${item.short_title ?? null}, ${item.summary},
         ${item.organizer}, ${item.official_url}, ${item.source_url},
-        ${sql.array(item.audience)}, ${sql.array(item.categories)}, ${item.level}, ${item.format},
+        ARRAY(SELECT jsonb_array_elements_text(${sql.json(item.audience)})),
+        ARRAY(SELECT jsonb_array_elements_text(${sql.json(item.categories)})),
+        ${item.level}, ${item.format},
         ${item.region}, ${item.registration_start ?? null}, ${item.registration_end ?? null},
         ${item.event_start ?? null}, ${item.event_end ?? null}, ${item.schedule_note},
         ${item.recognition}, ${item.recommendation}, ${item.fee ?? null}, ${item.team_size ?? null},
