@@ -1,0 +1,55 @@
+services:
+  database:
+    image: postgres:17-alpine
+    container_name: ccn-database
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?请配置 POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:?请配置 POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请配置 POSTGRES_PASSWORD}
+    volumes:
+      - ccn-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+    networks:
+      - ccn-internal
+
+  app:
+    build: .
+    container_name: ccn-app
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?请配置 DATABASE_URL}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?请配置 ADMIN_EMAIL}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:?请配置 ADMIN_PASSWORD_HASH}
+      SESSION_SECRET: ${SESSION_SECRET:?请配置 SESSION_SECRET}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?请配置 NEXT_PUBLIC_SITE_URL}
+    ports:
+      - "127.0.0.1:3003:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))\""]
+      interval: 20s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    networks:
+      ccn-internal:
+      caddy-shared:
+        aliases:
+          - ccn-app
+
+networks:
+  ccn-internal:
+  caddy-shared:
+    external: true
+    name: h2-growth-roadmap_default
+
+volumes:
+  ccn-postgres-data:
+    name: ccn-postgres-data
