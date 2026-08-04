@@ -1,29 +1,29 @@
-/* Hallmark · genre: editorial · macrostructure: Ecosystem Index · theme: Almanac · enrichment: none · nav: N11 · footer: Ft4 */
-/* Hallmark · pre-emit critique: P5 H4 E4 S5 R5 V5 */
+/* Hallmark · genre: editorial · macrostructure: Ecosystem Index · theme: Almanac · enrichment: none · nav: N11 · footer: Ft4 · contrast: pass (40–41) · slop: pass (42–49) · mobile: pass (34, 49–57) */
+/* Hallmark · pre-emit critique: P5 H4 E5 S5 R5 V5 */
 :root {
   --color-paper: oklch(97.2% 0.012 82);
   --color-paper-2: oklch(94.8% 0.018 82);
   --color-paper-3: oklch(91.8% 0.022 78);
   --color-ink: oklch(22% 0.025 63);
   --color-ink-2: oklch(35% 0.025 63);
-  --color-muted: oklch(53% 0.022 68);
+  --color-muted: oklch(44% 0.025 68);
   --color-rule: oklch(78% 0.028 76);
   --color-rule-strong: oklch(61% 0.038 68);
-  --color-accent: oklch(48% 0.16 34);
-  --color-accent-hover: oklch(42% 0.17 34);
+  --color-accent: oklch(42% 0.16 34);
+  --color-accent-hover: oklch(36% 0.16 34);
   --color-accent-soft: oklch(91% 0.055 42);
   --color-accent-ink: oklch(98% 0.008 75);
   --color-positive: oklch(45% 0.105 145);
   --color-positive-soft: oklch(91% 0.045 145);
-  --color-error: oklch(48% 0.18 25);
+  --color-error: oklch(40% 0.17 25);
   --color-error-soft: oklch(92% 0.05 25);
-  --color-focus: oklch(55% 0.17 250);
+  --color-focus: oklch(48% 0.17 250);
   --color-scrim: oklch(18% 0.015 60 / 0.3);
   --color-shadow: oklch(20% 0.02 60 / 0.07);
 
   --font-display: "Newsreader Variable", "Songti SC", serif;
   --font-body: "IBM Plex Sans Variable", "Microsoft YaHei", sans-serif;
-  --font-mono: "IBM Plex Mono", "SFMono-Regular", monospace;
+  --font-mono: "IBM Plex Sans Variable", "Microsoft YaHei", sans-serif;
 
   --space-3xs: 0.125rem;
   --space-2xs: 0.25rem;

@@ -8,7 +8,7 @@ const initialState: FormState = {};
 const dateValue = (value: string | null | undefined) => value ? String(value).slice(0, 10) : "";
 
 function ErrorText({ errors }: { errors?: string[] }) {
-  return errors?.length ? <small style={{ color: "var(--color-error)" }}>{errors[0]}</small> : null;
+  return <small aria-live="polite" style={{ color: "var(--color-error)" }}>{errors?.[0] || ""}</small>;
 }
 
 export function ListingForm({ item }: { item?: Listing | null }) {
