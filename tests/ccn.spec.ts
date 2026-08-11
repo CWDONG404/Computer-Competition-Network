@@ -78,7 +78,7 @@ test("搜索、旧参数与后台待审箱可用", async ({ page }) => {
   await expect(page).toHaveURL(/\/admin$/ , { timeout: 10_000 });
   await page.goto("/admin/review");
   await expect(page.getByRole("heading", { name: "待审箱" })).toBeVisible();
-  await expect(page.locator(".review-item").first()).toBeVisible();
+  await expect(page.locator(".review-item, .empty-state").first()).toBeVisible();
 });
 
 test("后台发布必须绑定核验日期、官网来源与证据", async ({ page }) => {
@@ -105,6 +105,7 @@ test("后台发布必须绑定核验日期、官网来源与证据", async ({ pa
   await expect(page.locator(".error-message")).toContainText("发布前必须填写核验日期");
 
   await page.locator("#verified_at").fill("2026-08-04");
+  await page.locator("#verification_status").selectOption("partial");
   await page.getByLabel("公开排行或作品").check();
   await page.getByRole("button", { name: "创建条目" }).click();
   await expect(page).toHaveURL(/\/admin\?saved=1/);

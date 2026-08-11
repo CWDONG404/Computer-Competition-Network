@@ -6,7 +6,7 @@ const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("缺少 DATABASE_URL");
 
 const sql = postgres(databaseUrl, { max: 1 });
-const CATALOG_VERSION = 2;
+const CATALOG_VERSION = 3;
 const legacyCatalog = JSON.parse(readFileSync(new URL("../data/seed-listings.json", import.meta.url), "utf8"));
 const currentCatalogSlugs = new Set(catalog.map((item) => item.slug));
 const retiredLegacySlugs = legacyCatalog.map((item) => item.slug).filter((slug) => !currentCatalogSlugs.has(slug));
@@ -55,7 +55,8 @@ try {
         audience, categories, level, format, region, registration_start, registration_end,
         event_start, event_end, schedule_note, recognition, recommendation, fee, team_size,
         status, featured, published, verified_at, cycle_type, eligibility, language,
-        validity_period, next_review_at, catalog_managed, catalog_version
+        validity_period, next_review_at, verification_status, topics, technologies,
+        target_roles, special_tags, catalog_managed, catalog_version
       ) VALUES (
         ${item.kind}, ${item.slug}, ${item.title}, ${item.short_title ?? null}, ${item.summary},
         ${item.organizer}, ${item.official_url}, ${item.source_url},
@@ -66,7 +67,9 @@ try {
         ${item.schedule_note}, ${item.recognition}, ${item.recommendation}, ${item.fee ?? null},
         ${item.team_size ?? null}, ${item.status}, ${item.featured}, ${item.published},
         ${item.verified_at}, ${item.cycle_type}, ${item.eligibility}, ${item.language},
-        ${item.validity_period ?? null}, ${item.next_review_at}, TRUE, ${CATALOG_VERSION}
+        ${item.validity_period ?? null}, ${item.next_review_at}, 'partial',
+        ARRAY(SELECT jsonb_array_elements_text(${sql.json(item.categories)})),
+        ARRAY[]::TEXT[], ARRAY[]::TEXT[], ARRAY[]::TEXT[], TRUE, ${CATALOG_VERSION}
       )
       ON CONFLICT (slug) DO UPDATE SET
         kind = EXCLUDED.kind,
@@ -99,6 +102,11 @@ try {
         language = EXCLUDED.language,
         validity_period = EXCLUDED.validity_period,
         next_review_at = EXCLUDED.next_review_at,
+        verification_status = EXCLUDED.verification_status,
+        topics = EXCLUDED.topics,
+        technologies = EXCLUDED.technologies,
+        target_roles = EXCLUDED.target_roles,
+        special_tags = EXCLUDED.special_tags,
         catalog_managed = TRUE,
         catalog_version = EXCLUDED.catalog_version
       WHERE listings.catalog_managed = TRUE OR listings.catalog_version = 0
@@ -112,8 +120,6 @@ try {
       UPDATE listing_sources SET active = FALSE
       WHERE listing_id = ${listingId} AND role IN ('official', 'rules')
     `;
-    await sql`DELETE FROM listing_events WHERE listing_id = ${listingId}`;
-    await sql`DELETE FROM listing_evidence WHERE listing_id = ${listingId}`;
     const sourceRows = await sql`
       INSERT INTO listing_sources (listing_id, role, title, url, monitor_mode, next_check_at)
       VALUES (${listingId}, 'official', '官方网站', ${item.official_url}, ${monitorMode(item.official_url)}, NOW())
@@ -162,6 +168,37 @@ try {
         VALUES (${listingId}, ${officialSourceId}, ${cycleLabel}, ${eventType}, ${startsAt}, ${endsAt}, TRUE)
         ON CONFLICT (listing_id, cycle_label, event_type, starts_at) DO UPDATE SET
           source_id = EXCLUDED.source_id, ends_at = EXCLUDED.ends_at, confirmed = EXCLUDED.confirmed
+      `;
+    }
+
+    if (item.kind === "competition") {
+      await sql`
+        INSERT INTO competition_profiles (listing_id, score_status)
+        VALUES (${listingId}, 'unrated')
+        ON CONFLICT (listing_id) DO UPDATE SET score_status='unrated', score_version=NULL,
+          recommendation_score=NULL, recommendation_level=NULL, scored_at=NULL
+      `;
+    } else if (item.kind === "certification") {
+      await sql`
+        INSERT INTO certification_profiles (
+          listing_id, category, exam_format, price, validity, score_status
+        ) VALUES (
+          ${listingId}, ${item.categories[0] ?? null}, ${item.format}, ${item.fee ?? null},
+          ${item.validity_period ?? null}, 'unrated'
+        )
+        ON CONFLICT (listing_id) DO UPDATE SET
+          category=EXCLUDED.category, exam_format=EXCLUDED.exam_format, price=EXCLUDED.price,
+          validity=EXCLUDED.validity, score_status='unrated', score_version=NULL,
+          recommendation_score=NULL, recommendation_level=NULL, scored_at=NULL
+      `;
+    } else {
+      await sql`
+        INSERT INTO platform_profiles (listing_id, platform_types, check_frequency)
+        VALUES (
+          ${listingId}, ARRAY(SELECT jsonb_array_elements_text(${sql.json(item.categories)})), 'weekly'
+        )
+        ON CONFLICT (listing_id) DO UPDATE SET
+          platform_types=EXCLUDED.platform_types, check_frequency=EXCLUDED.check_frequency
       `;
     }
   }

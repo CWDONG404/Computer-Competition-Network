@@ -16,6 +16,9 @@ for (const item of catalog) {
   if (!item.audience?.length) errors.push(`缺少适用人群：${item.slug}`);
   if (!item.categories?.length) errors.push(`缺少方向：${item.slug}`);
   if (!item.evidence?.length) errors.push(`缺少证据：${item.slug}`);
+  if ("recommendation_score" in item || "recommendation_level" in item || "competition_type" in item) {
+    errors.push(`旧目录内容不得伪造 Phase 2 评分或类型字段：${item.slug}`);
+  }
   for (const code of item.evidence ?? []) {
     if (!evidenceLabels[code]) errors.push(`未知证据标签 ${code}：${item.slug}`);
   }

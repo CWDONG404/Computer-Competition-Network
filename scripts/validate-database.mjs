@@ -1,4 +1,5 @@
 import postgres from "postgres";
+import { catalog } from "../data/catalog-v2.mjs";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("缺少 DATABASE_URL");
@@ -24,6 +25,7 @@ try {
     WHERE l.published=TRUE AND (
       NULLIF(BTRIM(l.official_url), '') IS NULL
       OR l.verified_at IS NULL
+      OR l.verification_status NOT IN ('verified', 'partial')
       OR NOT EXISTS (
         SELECT 1 FROM listing_sources s
         WHERE s.listing_id=l.id AND s.role='official' AND s.active=TRUE
@@ -52,7 +54,26 @@ try {
     throw new Error(`存在重复 Slug：${duplicates.map((row) => row.slug).join(", ")}`);
   }
 
-  console.log("数据库验收通过：70 场比赛、50 项证书、3 个平台；公开条目官网、证据和核验日期完整。 ");
+  const catalogRows = await sql`
+    SELECT slug FROM listings WHERE catalog_managed=TRUE AND published=TRUE ORDER BY slug
+  `;
+  const expectedSlugs = catalog.map((item) => item.slug).sort();
+  const actualSlugs = catalogRows.map((row) => row.slug);
+  if (actualSlugs.length !== expectedSlugs.length || actualSlugs.some((slug, index) => slug !== expectedSlugs[index])) {
+    throw new Error("数据库中的目录 Slug 与 catalog-v2.mjs 不完全一致");
+  }
+
+  const [profileCounts] = await sql`
+    SELECT
+      (SELECT COUNT(*)::int FROM competition_profiles cp JOIN listings l ON l.id=cp.listing_id WHERE l.kind='competition' AND l.catalog_managed=TRUE) AS competitions,
+      (SELECT COUNT(*)::int FROM certification_profiles cp JOIN listings l ON l.id=cp.listing_id WHERE l.kind='certification' AND l.catalog_managed=TRUE) AS certifications,
+      (SELECT COUNT(*)::int FROM platform_profiles pp JOIN listings l ON l.id=pp.listing_id WHERE l.kind='platform' AND l.catalog_managed=TRUE) AS platforms
+  `;
+  if (profileCounts.competitions !== 70 || profileCounts.certifications !== 50 || profileCounts.platforms !== 3) {
+    throw new Error(`Profile 数量不符合验收：${JSON.stringify(profileCounts)}`);
+  }
+
+  console.log("数据库验收通过：70 场比赛、50 项证书、3 个平台；公开条目的 Profile、官网、证据与核验状态完整。 ");
 } finally {
   await sql.end();
 }

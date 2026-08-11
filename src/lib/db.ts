@@ -1,6 +1,7 @@
 import postgres, { type Sql } from "postgres";
 import type {
   ListingDetails,
+  ListingEditorDetails,
   ListingEvent,
   ListingKind,
   ListingSource,
@@ -8,6 +9,7 @@ import type {
   ListingWithEvidence,
   ReviewItem
 } from "@/types/listing";
+import type { CertificationProfile, CompetitionProfile, ListingProfiles, PlatformProfile } from "@/features/catalog/types";
 
 let client: Sql | undefined;
 
@@ -194,7 +196,7 @@ export async function getListingBySlug(slug: string, includeDrafts = false): Pro
   const item = rows[0];
   if (!item) return null;
 
-  const [sources, events, related] = await Promise.all([
+  const [sources, events, related, profiles] = await Promise.all([
     sql<ListingSource[]>`SELECT id, listing_id, role, title, url, monitor_mode, active, last_checked_at, last_success_at, next_check_at, last_error
         FROM listing_sources WHERE listing_id = ${item.id} AND active = TRUE ORDER BY role, id`,
     sql<ListingEvent[]>`SELECT id, listing_id, source_id, cycle_label, event_type, starts_at, ends_at, timezone, confirmed
@@ -210,13 +212,14 @@ export async function getListingBySlug(slug: string, includeDrafts = false): Pro
       WHERE l.published = TRUE AND l.id <> ${item.id} AND l.kind = ${item.kind}
         AND l.categories && ${sql.array(item.categories)}::text[]
       ORDER BY l.featured DESC, l.verified_at DESC NULLS LAST LIMIT 4
-    `
+    `,
+    getListingProfiles(sql, item.id, item.kind)
   ]);
 
-  return { ...item, sources, events, related };
+  return { ...item, sources, events, related, ...profiles };
 }
 
-export async function getListingById(id: number) {
+export async function getListingById(id: number): Promise<ListingEditorDetails | null> {
   const sql = db();
   const rows = await sql<ListingWithEvidence[]>`
     SELECT l.*,
@@ -227,7 +230,52 @@ export async function getListingById(id: number) {
       WHERE e.listing_id = l.id), '[]'::jsonb) AS evidence
     FROM listings l WHERE l.id = ${id} LIMIT 1
   `;
-  return rows[0] ?? null;
+  const item = rows[0];
+  if (!item) return null;
+  const profiles = await getListingProfiles(sql, item.id, item.kind);
+  return { ...item, ...profiles };
+}
+
+async function getListingProfiles(sql: Sql, listingId: number, kind: ListingKind): Promise<ListingProfiles> {
+  const profiles: ListingProfiles = {
+    competition_profile: null,
+    certification_profile: null,
+    platform_profile: null
+  };
+  if (kind === "competition") {
+    const rows = await sql<CompetitionProfile[]>`
+      SELECT * FROM competition_profiles WHERE listing_id = ${listingId} LIMIT 1
+    `;
+    profiles.competition_profile = rows[0] ? normalizeProfileNumbers(rows[0]) : null;
+  } else if (kind === "certification") {
+    const rows = await sql<CertificationProfile[]>`
+      SELECT * FROM certification_profiles WHERE listing_id = ${listingId} LIMIT 1
+    `;
+    profiles.certification_profile = rows[0] ? normalizeProfileNumbers(rows[0]) : null;
+  } else {
+    const rows = await sql<PlatformProfile[]>`
+      SELECT * FROM platform_profiles WHERE listing_id = ${listingId} LIMIT 1
+    `;
+    profiles.platform_profile = rows[0] ? normalizeProfileNumbers(rows[0]) : null;
+  }
+  return profiles;
+}
+
+const profileNumberFields = new Set([
+  "agent_score", "ai_application_score", "algorithm_score", "security_score", "activity_score",
+  "direction_match_score", "resume_value", "portfolio_value", "reuse_value", "difficulty",
+  "winning_difficulty", "participation_cost", "global_recognition", "china_recognition",
+  "technical_depth", "hands_on_score", "ai_agent_score", "learning_value", "ecosystem_value",
+  "recruiting_value", "role_match_score", "scarcity_score", "fee_roi_score", "time_roi_score",
+  "preparation_cost", "recommendation_score"
+]);
+
+function normalizeProfileNumbers<T extends object>(profile: T): T {
+  const normalized = { ...profile } as Record<string, unknown>;
+  for (const key of profileNumberFields) {
+    if (typeof normalized[key] === "string") normalized[key] = Number(normalized[key]);
+  }
+  return normalized as T;
 }
 
 export async function getTaxonomy() {

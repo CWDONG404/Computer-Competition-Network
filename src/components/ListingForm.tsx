@@ -2,7 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { saveListingAction, type FormState } from "@/app/admin/actions";
-import { evidenceLabels, type EvidenceCode, type ListingWithEvidence } from "@/types/listing";
+import { ListingProfileFields } from "@/components/ListingProfileFields";
+import { evidenceLabels, type EvidenceCode, type ListingEditorDetails, type ListingKind } from "@/types/listing";
 
 const initialState: FormState = {};
 const dateValue = (value: string | null | undefined) => value ? String(value).slice(0, 10) : "";
@@ -11,18 +12,20 @@ function ErrorText({ errors }: { errors?: string[] }) {
   return <small aria-live="polite" style={{ color: "var(--color-error)" }}>{errors?.[0] || ""}</small>;
 }
 
-export function ListingForm({ item }: { item?: ListingWithEvidence | null }) {
+export function ListingForm({ item }: { item?: ListingEditorDetails | null }) {
   const [state, action, pending] = useActionState(saveListingAction, initialState);
   const [clientError, setClientError] = useState<string | null>(null);
+  const [kind, setKind] = useState<ListingKind>(item?.kind || "competition");
   return (
     <form action={action} onSubmit={(event) => {
       const values = new FormData(event.currentTarget);
       const wantsPublish = values.get("published") === "on";
       const hasVerifiedDate = Boolean(values.get("verified_at"));
       const hasEvidence = values.getAll("evidence_codes").length > 0;
-      if (wantsPublish && (!hasVerifiedDate || !hasEvidence)) {
+      const verificationStatus = values.get("verification_status");
+      if (wantsPublish && (!hasVerifiedDate || !hasEvidence || verificationStatus === "unverified")) {
         event.preventDefault();
-        setClientError("发布前必须填写核验日期，并至少选择一项可追溯的认可证据。");
+        setClientError("发布前必须填写核验日期、选择认可证据，并将核验状态设为部分核验或官方已核验。");
         return;
       }
       setClientError(null);
@@ -30,7 +33,7 @@ export function ListingForm({ item }: { item?: ListingWithEvidence | null }) {
       {item && <input type="hidden" name="id" value={item.id} />}
       {(clientError || state.error) && <div className="error-message" role="alert">{clientError || state.error}</div>}
       <div className="filter-form" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
-        <div className="field"><label htmlFor="kind">类型</label><select className="select" id="kind" name="kind" defaultValue={item?.kind || "competition"}><option value="competition">比赛</option><option value="certification">考证</option><option value="platform">机会平台</option></select></div>
+        <div className="field"><label htmlFor="kind">类型</label><select className="select" id="kind" name="kind" value={kind} onChange={(event) => setKind(event.target.value as ListingKind)}><option value="competition">比赛</option><option value="certification">考证</option><option value="platform">机会平台</option></select></div>
         <div className="field"><label htmlFor="status">状态</label><select className="select" id="status" name="status" defaultValue={item?.status || "awaiting"}><option value="open">报名中</option><option value="upcoming">即将开始</option><option value="year_round">全年可参与</option><option value="awaiting">待官方公告</option><option value="closed">本期已结束</option></select></div>
         <div className="field"><label htmlFor="slug">Slug</label><input className="input" id="slug" name="slug" defaultValue={item?.slug || ""} placeholder="icpc-2026" required /><ErrorText errors={state.fieldErrors?.slug} /></div>
       </div>
@@ -64,6 +67,7 @@ export function ListingForm({ item }: { item?: ListingWithEvidence | null }) {
           <div className="field"><label htmlFor="official_url">官方网站</label><input className="input" id="official_url" name="official_url" type="url" defaultValue={item?.official_url || ""} required /></div>
           <div className="field"><label htmlFor="source_url">本条信息来源</label><input className="input" id="source_url" name="source_url" type="url" defaultValue={item?.source_url || ""} required /></div>
           <div className="field"><label htmlFor="verified_at">最后核验日期</label><input className="input" id="verified_at" name="verified_at" type="date" defaultValue={dateValue(item?.verified_at)} /></div>
+          <div className="field"><label htmlFor="verification_status">核验状态</label><select className="select" id="verification_status" name="verification_status" defaultValue={item?.verification_status || "unverified"}><option value="unverified">尚未核验</option><option value="partial">部分核验</option><option value="verified">官方已核验</option></select></div>
         </div>
         <div style={{ display: "grid", gap: "var(--space-lg)" }}>
           <div className="field"><label htmlFor="audience">适用人群（逗号分隔）</label><input className="input" id="audience" name="audience" defaultValue={item?.audience.join("，") || "大学生"} required /></div>
@@ -72,6 +76,13 @@ export function ListingForm({ item }: { item?: ListingWithEvidence | null }) {
           <div className="field"><label htmlFor="region">地区</label><input className="input" id="region" name="region" defaultValue={item?.region || "不限"} required /></div>
           <div className="field"><label htmlFor="format">形式</label><input className="input" id="format" name="format" defaultValue={item?.format || "以官网为准"} required /></div>
         </div>
+      </section>
+
+      <section className="filter-form profile-editor__grid">
+        <div className="field"><label htmlFor="topics">细分主题（逗号分隔）</label><input className="input" id="topics" name="topics" defaultValue={item?.topics.join("，") || item?.categories.join("，") || ""} /></div>
+        <div className="field"><label htmlFor="technologies">技术栈（逗号分隔）</label><input className="input" id="technologies" name="technologies" defaultValue={item?.technologies.join("，") || ""} /></div>
+        <div className="field"><label htmlFor="target_roles">目标岗位（逗号分隔）</label><input className="input" id="target_roles" name="target_roles" defaultValue={item?.target_roles.join("，") || ""} /></div>
+        <div className="field"><label htmlFor="special_tags">特色标签（逗号分隔）</label><input className="input" id="special_tags" name="special_tags" defaultValue={item?.special_tags.join("，") || ""} /></div>
       </section>
 
       <section className="filter-form" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
@@ -90,6 +101,8 @@ export function ListingForm({ item }: { item?: ListingWithEvidence | null }) {
           <div className="field"><label htmlFor="team_size">团队/报名要求</label><input className="input" id="team_size" name="team_size" defaultValue={item?.team_size || ""} /></div>
         </div>
       </section>
+
+      <ListingProfileFields kind={kind} item={item} />
 
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "var(--space-lg)" }}>
         <label><input name="featured" type="checkbox" defaultChecked={item?.featured} /> 设为精选</label>

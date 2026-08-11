@@ -1,3 +1,11 @@
+import type {
+  CompetitionProfile,
+  CertificationProfile,
+  ListingProfiles,
+  PlatformProfile,
+  VerificationStatus
+} from "@/features/catalog/types";
+
 export type ListingKind = "competition" | "certification" | "platform";
 export type ListingStatus = "open" | "upcoming" | "year_round" | "awaiting" | "closed";
 export type CycleType = "fixed" | "annual" | "rolling" | "on_demand";
@@ -45,6 +53,11 @@ export interface Listing {
   language: string;
   validity_period: string | null;
   next_review_at: string | null;
+  verification_status: VerificationStatus;
+  topics: string[];
+  technologies: string[];
+  target_roles: string[];
+  special_tags: string[];
   featured: boolean;
   published: boolean;
   verified_at: string | null;
@@ -94,11 +107,15 @@ export interface ListingWithEvidence extends Listing {
   evidence: ListingEvidence[];
 }
 
-export interface ListingDetails extends ListingWithEvidence {
+export interface ListingDetails extends ListingWithEvidence, ListingProfiles {
   sources: ListingSource[];
   events: ListingEvent[];
   related: ListingWithEvidence[];
 }
+
+export type ListingEditorDetails = ListingWithEvidence & ListingProfiles;
+
+export type { CompetitionProfile, CertificationProfile, PlatformProfile, VerificationStatus };
 
 export interface ReviewItem {
   id: number;
