@@ -7,7 +7,6 @@ WORKDIR /app
 COPY --chown=nextjs:nodejs runtime/server.js ./server.js
 COPY --chown=nextjs:nodejs runtime/.next/ ./.next/
 COPY --chown=nextjs:nodejs static/ ./.next/static/
-COPY --chown=nextjs:nodejs public/ ./public/
 COPY --chown=nextjs:nodejs data/ ./data/
 COPY --chown=nextjs:nodejs scripts/ ./scripts/
 USER nextjs

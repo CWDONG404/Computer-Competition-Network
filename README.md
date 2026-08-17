@@ -52,7 +52,7 @@ docker compose --env-file .env.production up -d --build
 
 服务器资源有限时，可使用 `deploy/Dockerfile.prebuilt-release` 基于已验证的运行镜像制作轻量覆盖层；它接收本地已通过验收的 Next.js 编译产物及 `data/`、`scripts/`，生产机不再安装依赖或编译 Next.js。
 
-其构建上下文包含 `runtime/server.js`、`runtime/.next/`、`.next/static/` 对应的 `static/`，以及 `public/`、`data/`、`scripts/`；基础镜像继续提供已验证的 Linux 依赖。
+其构建上下文包含 `runtime/server.js`、`runtime/.next/`、`.next/static/` 对应的 `static/`，以及 `data/`、`scripts/`；基础镜像继续提供已验证的 Linux 依赖与公共静态目录。
 
 ## GitHub Actions Secrets
 
