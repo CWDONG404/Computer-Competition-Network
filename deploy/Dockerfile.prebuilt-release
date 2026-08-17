@@ -1,0 +1,13 @@
+# 低资源生产机使用的预编译发布层。
+# 构建上下文由本地验收后的产物组装，目录结构见 README 的容器部署说明。
+FROM cwdzone-ccn-runtime:latest
+
+USER root
+WORKDIR /app
+COPY --chown=nextjs:nodejs runtime/server.js ./server.js
+COPY --chown=nextjs:nodejs runtime/.next/ ./.next/
+COPY --chown=nextjs:nodejs static/ ./.next/static/
+COPY --chown=nextjs:nodejs public/ ./public/
+COPY --chown=nextjs:nodejs data/ ./data/
+COPY --chown=nextjs:nodejs scripts/ ./scripts/
+USER nextjs

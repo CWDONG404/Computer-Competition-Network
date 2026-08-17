@@ -200,7 +200,8 @@ export async function getListingBySlug(slug: string, includeDrafts = false): Pro
     sql<ListingSource[]>`SELECT id, listing_id, role, title, url, monitor_mode, active, last_checked_at, last_success_at, next_check_at, last_error
         FROM listing_sources WHERE listing_id = ${item.id} AND active = TRUE ORDER BY role, id`,
     sql<ListingEvent[]>`SELECT id, listing_id, source_id, cycle_label, event_type, starts_at, ends_at, timezone, confirmed
-        FROM listing_events WHERE listing_id = ${item.id} ORDER BY starts_at ASC NULLS LAST, id`,
+        FROM listing_events WHERE listing_id = ${item.id} AND confirmed = TRUE
+        ORDER BY starts_at ASC NULLS LAST, id`,
     sql<ListingWithEvidence[]>`
       SELECT l.*,
         COALESCE((SELECT jsonb_agg(jsonb_build_object(

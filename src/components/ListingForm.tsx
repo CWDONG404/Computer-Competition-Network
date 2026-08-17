@@ -34,7 +34,7 @@ export function ListingForm({ item }: { item?: ListingEditorDetails | null }) {
       {(clientError || state.error) && <div className="error-message" role="alert">{clientError || state.error}</div>}
       <div className="filter-form" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
         <div className="field"><label htmlFor="kind">类型</label><select className="select" id="kind" name="kind" value={kind} onChange={(event) => setKind(event.target.value as ListingKind)}><option value="competition">比赛</option><option value="certification">考证</option><option value="platform">机会平台</option></select></div>
-        <div className="field"><label htmlFor="status">状态</label><select className="select" id="status" name="status" defaultValue={item?.status || "awaiting"}><option value="open">报名中</option><option value="upcoming">即将开始</option><option value="year_round">全年可参与</option><option value="awaiting">待官方公告</option><option value="closed">本期已结束</option></select></div>
+        <div className="field"><label htmlFor="status">状态</label><select className="select" id="status" name="status" defaultValue={item?.status || "awaiting"}><option value="open">报名中</option><option value="upcoming">即将开始</option><option value="year_round">全年可参与</option><option value="awaiting">待官方公告</option><option value="closed">当前不可报名</option></select></div>
         <div className="field"><label htmlFor="slug">Slug</label><input className="input" id="slug" name="slug" defaultValue={item?.slug || ""} placeholder="icpc-2026" required /><ErrorText errors={state.fieldErrors?.slug} /></div>
       </div>
 

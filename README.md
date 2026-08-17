@@ -2,6 +2,8 @@
 
 面向中文用户的计算机比赛、黑客松与职业证书技术情报台。主目录固定收录 70 场具体比赛与 50 项具体证书；Kaggle、天池、Devpost 等持续机会单列为平台，不占核心项目数量。
 
+> 数据状态：70 场比赛已于 **2026-08-17** 按主办方官网和官方规则完成全量核验。当前包含 7 场报名中、12 场即将开始、8 个持续系列；日期无法确认的项目继续标记为“待官方公告”。[查看本次核验记录](docs/DATA_REFRESH_2026-08-17.md)。
+
 ## 主要功能
 
 - 首页直接提供全站搜索、临近截止、大学生/在职入口与最近核验。
@@ -47,6 +49,10 @@ docker compose --env-file .env.production up -d --build
 容器启动时会自动运行增量迁移和幂等种子导入。应用容器同时加入现有 `h2-growth-roadmap_default` 网络，供 Caddy 通过 `ccn-app:3000` 访问；PostgreSQL 只存在于项目内部网络，不映射宿主机端口。监测容器限制为约 128MB 内存和 0.25 CPU。
 
 生产域名的 Caddy 配置片段位于 `deploy/Caddyfile.ccn`。服务器现有 Caddy 仍负责证书与 HTTPS，不应再启动第二个占用 80/443 的代理。
+
+服务器资源有限时，可使用 `deploy/Dockerfile.prebuilt-release` 基于已验证的运行镜像制作轻量覆盖层；它接收本地已通过验收的 Next.js 编译产物及 `data/`、`scripts/`，生产机不再安装依赖或编译 Next.js。
+
+其构建上下文包含 `runtime/server.js`、`runtime/.next/`、`.next/static/` 对应的 `static/`，以及 `public/`、`data/`、`scripts/`；基础镜像继续提供已验证的 Linux 依赖。
 
 ## GitHub Actions Secrets
 

@@ -145,7 +145,7 @@ export const statusLabels: Record<ListingStatus, string> = {
   upcoming: "即将开始",
   year_round: "持续开放",
   awaiting: "待官方公告",
-  closed: "本期已结束"
+  closed: "当前不可报名"
 };
 
 export const cycleLabels: Record<CycleType, string> = {

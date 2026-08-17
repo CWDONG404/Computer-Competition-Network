@@ -6,7 +6,7 @@ const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("缺少 DATABASE_URL");
 
 const sql = postgres(databaseUrl, { max: 1 });
-const CATALOG_VERSION = 3;
+const CATALOG_VERSION = 4;
 const legacyCatalog = JSON.parse(readFileSync(new URL("../data/seed-listings.json", import.meta.url), "utf8"));
 const currentCatalogSlugs = new Set(catalog.map((item) => item.slug));
 const retiredLegacySlugs = legacyCatalog.map((item) => item.slug).filter((slug) => !currentCatalogSlugs.has(slug));
@@ -109,13 +109,23 @@ try {
         special_tags = EXCLUDED.special_tags,
         catalog_managed = TRUE,
         catalog_version = EXCLUDED.catalog_version
-      WHERE listings.catalog_managed = TRUE OR listings.catalog_version = 0
+      WHERE listings.catalog_managed = TRUE
       RETURNING id, catalog_managed
     `;
 
     const listingRecord = rows[0] ?? (await sql`SELECT id, catalog_managed FROM listings WHERE slug = ${item.slug}`)[0];
     const listingId = listingRecord.id;
     if (!listingRecord.catalog_managed) continue;
+    // 保留旧轮次作为审计记录，但不再让过期节点进入公开时间轴。
+    // 管理员接管的条目已在上方 continue，因此不会改动人工维护的时间节点。
+    await sql`
+      UPDATE listing_events SET confirmed = FALSE
+      WHERE listing_id = ${listingId}
+        AND source_id IN (
+          SELECT id FROM listing_sources
+          WHERE listing_id = ${listingId} AND role IN ('official', 'rules')
+        )
+    `;
     await sql`
       UPDATE listing_sources SET active = FALSE
       WHERE listing_id = ${listingId} AND role IN ('official', 'rules')
@@ -156,7 +166,7 @@ try {
       `;
     }
 
-    const cycleLabel = item.verified_at?.slice(0, 4) || "当前周期";
+    const cycleLabel = `catalog-v${CATALOG_VERSION}`;
     const events = [
       item.registration_start && ["registration_open", item.registration_start, item.registration_start],
       item.registration_end && ["registration_close", item.registration_end, item.registration_end],
