@@ -13,6 +13,11 @@ const views = [
   ["year", "未来全年", 365]
 ] as const;
 
+function calendarDate(value: string | Date) {
+  const dateOnly = value instanceof Date ? value.toISOString().slice(0, 10) : value.slice(0, 10);
+  return new Date(`${dateOnly}T00:00:00+08:00`);
+}
+
 export default async function CalendarPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const params = await searchParams;
   const raw = Array.isArray(params.view) ? params.view[0] : params.view;
@@ -25,14 +30,14 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const dated = items.filter((item) => {
     const value = item.registration_end || item.event_start;
     if (!value) return false;
-    const date = new Date(`${String(value).slice(0, 10)}T00:00:00+08:00`);
+    const date = calendarDate(value);
     return date >= start && date <= end;
   });
   const rolling = items.filter((item) => item.status === "year_round" || item.cycle_type === "rolling");
   const groups = new Map<string, typeof dated>();
   for (const item of dated) {
     const value = item.registration_end || item.event_start!;
-    const label = new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "long", timeZone: "Asia/Shanghai" }).format(new Date(`${String(value).slice(0, 10)}T00:00:00+08:00`));
+    const label = new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "long", timeZone: "Asia/Shanghai" }).format(calendarDate(value));
     groups.set(label, [...(groups.get(label) || []), item]);
   }
 
